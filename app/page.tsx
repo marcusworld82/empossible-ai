@@ -1,7 +1,5 @@
-"use client";
+import HomePage from '@/components/HomePage';
 
-import { DemoOne } from "@/components/ui/demo";
-
-export default function Home() {
-  return <DemoOne />;
+export default function Page() {
+  return <HomePage />;
 }
