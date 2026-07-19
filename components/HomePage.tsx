@@ -5,23 +5,22 @@ import ParticleWave from './ParticleWave';
 
 export default function HomePage() {
   useEffect(() => {
-    // Scroll reveal
     const revealEls = document.querySelectorAll('.reveal');
     const revealObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        if (entry.isIntersecting) entry.target.classList.add('visible');
+        if (entry.isIntersecting) (entry.target as HTMLElement).classList.add('visible');
       });
     }, { threshold: 0.2 });
     revealEls.forEach(el => revealObserver.observe(el));
 
-    // Mockup animations
-    function animateSequence(container: Element, selector: string, staggerMs: number) {
-      const items = container.querySelectorAll(selector);
+    function animateSequence(container: HTMLElement, selector: string, staggerMs: number) {
+      const items = container.querySelectorAll<HTMLElement>(selector);
       items.forEach((item, i) => setTimeout(() => item.classList.add('show'), i * staggerMs));
-      const chip = container.querySelector('.status-chip');
+      const chip = container.querySelector<HTMLElement>('.status-chip');
       if (chip) setTimeout(() => chip.classList.add('show'), items.length * staggerMs);
     }
-    const mockups = document.querySelectorAll('[data-animate]');
+
+    const mockups = document.querySelectorAll<HTMLElement>('[data-animate]');
     const mockupObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         const el = entry.target as HTMLElement;
@@ -32,7 +31,7 @@ export default function HomePage() {
           if (type === 'chat') animateSequence(el, '.bubble', 400);
           if (type === 'workflow') animateSequence(el, '.workflow-icon', 300);
           if (type === 'dashboard') {
-            el.querySelectorAll('.dashboard-stat').forEach((s, i) =>
+            el.querySelectorAll<HTMLElement>('.dashboard-stat').forEach((s, i) =>
               setTimeout(() => s.classList.add('show'), i * 150));
           }
         }
@@ -40,8 +39,7 @@ export default function HomePage() {
     }, { threshold: 0.3 });
     mockups.forEach(m => mockupObserver.observe(m));
 
-    // FAQ accordion
-    const faqItems = document.querySelectorAll('.faq-item');
+    const faqItems = document.querySelectorAll<HTMLElement>('.faq-item');
     faqItems.forEach(item => {
       item.addEventListener('click', () => {
         const isOpen = item.classList.contains('open');
@@ -58,18 +56,18 @@ export default function HomePage() {
       });
     });
 
-    // Testimonial rotator
     const testimonials = [
       { quote: '[Placeholder testimonial quote goes here]', name: '[Client Name]', title: '[Client Title / Company]' },
       { quote: '[Placeholder testimonial quote goes here]', name: '[Client Name]', title: '[Client Title / Company]' },
       { quote: '[Placeholder testimonial quote goes here]', name: '[Client Name]', title: '[Client Title / Company]' },
     ];
     let tIndex = 0;
-    const card = document.getElementById('testimonial-card');
-    const quoteEl = document.getElementById('testimonial-quote');
-    const nameEl = document.getElementById('testimonial-name');
-    const titleEl = document.getElementById('testimonial-title');
-    const dots = document.querySelectorAll('#testimonial-dots .dot');
+    const card = document.getElementById('testimonial-card') as HTMLElement | null;
+    const quoteEl = document.getElementById('testimonial-quote') as HTMLElement | null;
+    const nameEl = document.getElementById('testimonial-name') as HTMLElement | null;
+    const titleEl = document.getElementById('testimonial-title') as HTMLElement | null;
+    const dots = document.querySelectorAll<HTMLElement>('#testimonial-dots .dot');
+
     const interval = setInterval(() => {
       if (!card || !quoteEl || !nameEl || !titleEl) return;
       card.classList.add('fade');
@@ -78,7 +76,10 @@ export default function HomePage() {
         quoteEl.textContent = '"' + testimonials[tIndex].quote + '"';
         nameEl.textContent = testimonials[tIndex].name;
         titleEl.textContent = testimonials[tIndex].title;
-        dots.forEach((d, i) => d.classList.toggle('active', i === tIndex));
+        dots.forEach((d, i) => {
+          if (i === tIndex) d.classList.add('active');
+          else d.classList.remove('active');
+        });
         card.classList.remove('fade');
       }, 400);
     }, 4000);
