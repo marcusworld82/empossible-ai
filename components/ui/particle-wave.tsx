@@ -1,5 +1,6 @@
+"use client";
+
 import React, { useRef, useEffect } from 'react';
-import * as THREE from 'three';
 
 interface ParticleWaveProps {
   className?: string;
@@ -7,31 +8,10 @@ interface ParticleWaveProps {
 
 const ParticleWave: React.FC<ParticleWaveProps> = ({ className = '' }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const sceneRef = useRef<{
-    scene: THREE.Scene;
-    camera: THREE.PerspectiveCamera;
-    renderer: THREE.WebGLRenderer;
-    particles: THREE.Points;
-    particleMaterial: THREE.ShaderMaterial;
-    animationId: number | null;
-    mouse: THREE.Vector2;
-  } | null>(null);
+  const sceneRef = useRef<any>(null);
 
-  const getCurrentTheme = () => {
-    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-  };
-
-  const getBackgroundColor = (theme: string) => {
-    return theme === 'dark'
-      ? new THREE.Color(0x000000)
-      : new THREE.Color(0xffffff);
-  };
-
-  const getParticleColor = (theme: string) => {
-    return theme === 'dark'
-      ? new THREE.Vector3(1.0, 1.0, 1.0)
-      : new THREE.Vector3(0.0, 0.0, 0.0);
-  };
+  const getCurrentTheme = () =>
+    document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 
   const particleVertex = `
     attribute float scale;
@@ -55,158 +35,116 @@ const ParticleWave: React.FC<ParticleWaveProps> = ({ className = '' }) => {
     }
   `;
 
-  const initScene = () => {
+  useEffect(() => {
     if (!canvasRef.current) return;
 
-    const canvas = canvasRef.current;
-    const winWidth = window.innerWidth;
-    const winHeight = window.innerHeight;
-    const aspectRatio = winWidth / winHeight;
+    let THREE: typeof import('three');
+    let animationId: number | null = null;
 
-    const camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.01, 1000);
-    camera.position.set(0, 6, 5);
+    const setup = async () => {
+      THREE = await import('three');
 
-    const scene = new THREE.Scene();
+      const canvas = canvasRef.current!;
+      const winWidth = window.innerWidth;
+      const winHeight = window.innerHeight;
 
-    const renderer = new THREE.WebGLRenderer({
-      canvas,
-      antialias: true,
-    });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(winWidth, winHeight);
+      const camera = new THREE.PerspectiveCamera(75, winWidth / winHeight, 0.01, 1000);
+      camera.position.set(0, 6, 5);
 
-    const currentTheme = getCurrentTheme();
-    renderer.setClearColor(getBackgroundColor(currentTheme));
+      const scene = new THREE.Scene();
 
-    const gap = 0.3;
-    const amountX = 200;
-    const amountY = 200;
-    const particleNum = amountX * amountY;
-    const particlePositions = new Float32Array(particleNum * 3);
-    const particleScales = new Float32Array(particleNum);
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(winWidth, winHeight);
 
-    let i = 0;
-    let j = 0;
-    for (let ix = 0; ix < amountX; ix++) {
-      for (let iy = 0; iy < amountY; iy++) {
-        particlePositions[i] = ix * gap - ((amountX * gap) / 2);
-        particlePositions[i + 1] = 0;
-        particlePositions[i + 2] = iy * gap - ((amountX * gap) / 2);
-        particleScales[j] = 1;
-        i += 3;
-        j++;
-      }
-    }
+      const getThemeColor = (theme: string) =>
+        theme === 'dark'
+          ? new THREE.Vector3(1.0, 1.0, 1.0)
+          : new THREE.Vector3(0.0, 0.0, 0.0);
 
-    const particleGeometry = new THREE.BufferGeometry();
-    particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-    particleGeometry.setAttribute('scale', new THREE.BufferAttribute(particleScales, 1));
+      const getBgColor = (theme: string) =>
+        theme === 'dark' ? new THREE.Color(0x000000) : new THREE.Color(0xffffff);
 
-    const particleMaterial = new THREE.ShaderMaterial({
-      transparent: true,
-      vertexShader: particleVertex,
-      fragmentShader: particleFragment,
-      uniforms: {
-        uTime: { value: 0 },
-        uColor: { value: getParticleColor(getCurrentTheme()) }
-      }
-    });
+      renderer.setClearColor(getBgColor(getCurrentTheme()));
 
-    const particles = new THREE.Points(particleGeometry, particleMaterial);
-    scene.add(particles);
+      const gap = 0.3;
+      const amountX = 200;
+      const amountY = 200;
+      const particleNum = amountX * amountY;
+      const positions = new Float32Array(particleNum * 3);
+      const scales = new Float32Array(particleNum);
 
-    const mouse = new THREE.Vector2(-10, -10);
-
-    sceneRef.current = {
-      scene,
-      camera,
-      renderer,
-      particles,
-      particleMaterial,
-      animationId: null,
-      mouse
-    };
-  };
-
-  const animate = () => {
-    if (!sceneRef.current) return;
-
-    const { scene, camera, renderer, particleMaterial } = sceneRef.current;
-
-    particleMaterial.uniforms.uTime.value += 0.05;
-
-    const currentTheme = getCurrentTheme();
-    particleMaterial.uniforms.uColor.value = getParticleColor(currentTheme);
-    renderer.setClearColor(getBackgroundColor(currentTheme));
-
-    camera.lookAt(scene.position);
-    renderer.render(scene, camera);
-
-    sceneRef.current.animationId = requestAnimationFrame(animate);
-  };
-
-  const handleResize = () => {
-    if (!sceneRef.current) return;
-
-    const { camera, renderer } = sceneRef.current;
-    const winWidth = window.innerWidth;
-    const winHeight = window.innerHeight;
-
-    camera.aspect = winWidth / winHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(winWidth, winHeight);
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!sceneRef.current) return;
-
-    sceneRef.current.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-    sceneRef.current.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-  };
-
-  useEffect(() => {
-    initScene();
-    animate();
-
-    const handleResizeEvent = () => handleResize();
-    const handleMouseMoveEvent = (e: MouseEvent) => handleMouseMove(e);
-
-    window.addEventListener('resize', handleResizeEvent);
-    window.addEventListener('mousemove', handleMouseMoveEvent);
-
-    return () => {
-      if (sceneRef.current?.animationId) {
-        cancelAnimationFrame(sceneRef.current.animationId);
-      }
-      window.removeEventListener('resize', handleResizeEvent);
-      window.removeEventListener('mousemove', handleMouseMoveEvent);
-
-      if (sceneRef.current) {
-        const { scene, renderer, particles } = sceneRef.current;
-        scene.remove(particles);
-        if (particles.geometry) particles.geometry.dispose();
-        if (particles.material) {
-          if (Array.isArray(particles.material)) {
-            particles.material.forEach(material => material.dispose());
-          } else {
-            particles.material.dispose();
-          }
+      let i = 0, j = 0;
+      for (let ix = 0; ix < amountX; ix++) {
+        for (let iy = 0; iy < amountY; iy++) {
+          positions[i] = ix * gap - (amountX * gap) / 2;
+          positions[i + 1] = 0;
+          positions[i + 2] = iy * gap - (amountY * gap) / 2;
+          scales[j] = 1;
+          i += 3;
+          j++;
         }
-        renderer.dispose();
       }
+
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
+
+      const material = new THREE.ShaderMaterial({
+        transparent: true,
+        vertexShader: particleVertex,
+        fragmentShader: particleFragment,
+        uniforms: {
+          uTime: { value: 0 },
+          uColor: { value: getThemeColor(getCurrentTheme()) },
+        },
+      });
+
+      const particles = new THREE.Points(geometry, material);
+      scene.add(particles);
+
+      sceneRef.current = { scene, camera, renderer, particles, material };
+
+      const animate = () => {
+        material.uniforms.uTime.value += 0.05;
+        const theme = getCurrentTheme();
+        material.uniforms.uColor.value = getThemeColor(theme);
+        renderer.setClearColor(getBgColor(theme));
+        camera.lookAt(scene.position);
+        renderer.render(scene, camera);
+        animationId = requestAnimationFrame(animate);
+      };
+      animate();
+
+      const handleResize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      };
+
+      window.addEventListener('resize', handleResize);
+
+      return () => {
+        if (animationId) cancelAnimationFrame(animationId);
+        window.removeEventListener('resize', handleResize);
+        scene.remove(particles);
+        geometry.dispose();
+        material.dispose();
+        renderer.dispose();
+      };
     };
+
+    let cleanup: (() => void) | undefined;
+    setup().then((fn) => { cleanup = fn; });
+
+    return () => { cleanup?.(); };
   }, []);
 
   return (
     <canvas
       ref={canvasRef}
       className={`block ${className}`}
-      style={{
-        width: '100vw',
-        height: '100vh',
-        margin: 0,
-        overflow: 'hidden'
-      }}
+      style={{ width: '100vw', height: '100vh', margin: 0, overflow: 'hidden' }}
     />
   );
 };

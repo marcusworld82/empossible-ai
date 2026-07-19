@@ -1,3 +1,5 @@
+"use client";
+
 import { ParticleWave } from "@/components/ui/particle-wave";
 
 const DemoOne = () => {
